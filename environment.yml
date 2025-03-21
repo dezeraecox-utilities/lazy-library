@@ -1,0 +1,12 @@
+name: lazy-lib
+channels:
+  - defaults
+dependencies:
+  - python
+  - streamlit
+  - requests
+  - pandas
+  - pillow
+  - pip
+  - pip:
+      - pyzbar
