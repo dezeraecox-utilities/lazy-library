@@ -149,11 +149,46 @@ def create_notion_page(notion_token, database_id, book_data):
     response = requests.post(url, headers=headers, data=json.dumps(payload))
     return response.status_code, response.json()
 
+def get_existing_isbns(notion_token, database_id):
+    """Fetches existing ISBNs from the Notion database to avoid duplicates."""
+    url = f"https://api.notion.com/v1/databases/{database_id}/query"
+    headers = {
+        "Authorization": f"Bearer {notion_token}",
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28"
+    }
+    existing_isbns = set()
+    has_more = True
+    next_cursor = None
+
+    while has_more:
+        payload = {"start_cursor": next_cursor} if next_cursor else {}
+        response = requests.post(url, headers=headers, json=payload)
+        if response.status_code == 200:
+            data = response.json()
+            for result in data.get("results", []):
+                properties = result.get("properties", {})
+                isbn_property = properties.get("ISBN", {}).get("rich_text", [])
+                if isbn_property:
+                    existing_isbns.add(isbn_property[0].get("text", {}).get("content", ""))
+            has_more = data.get("has_more", False)
+            next_cursor = data.get("next_cursor", None)
+        else:
+            print(f"Failed to fetch existing ISBNs: {response.json()}")
+            break
+
+    return existing_isbns
+
 def process_isbns_and_update_notion(file_path, notion_token, database_id):
     """Reads ISBNs from a file, fetches their data, and updates a Notion database."""
     isbns = read_isbns_from_file(file_path)
+    existing_isbns = get_existing_isbns(notion_token, database_id)
     books_df = fetch_books_data(isbns)
+
     for _, book_data in books_df.iterrows():
+        if book_data['ISBN'] in existing_isbns:
+            print(f"Skipping duplicate ISBN: {book_data['ISBN']}")
+            continue
         status_code, response = create_notion_page(notion_token, database_id, book_data)
         if status_code != 200:
             print(f"Failed to create page for ISBN {book_data['ISBN']}: {response}")
