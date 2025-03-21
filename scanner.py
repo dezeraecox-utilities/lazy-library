@@ -1,7 +1,8 @@
 import streamlit as st
 import requests
 import pandas as pd
-from pyzbar.pyzbar import decode
+from barcode import EAN13
+from barcode.writer import ImageWriter
 from PIL import Image
 import io
 
@@ -78,14 +79,15 @@ def merge_book_data(isbn, google_data, open_library_data):
 def decode_barcode(image_data):
     """
     Given a BytesIO image_data from st.camera_input, decode the barcode (ISBN)
-    using pyzbar and return the decoded string.
+    using python-barcode and return the decoded string.
     """
     try:
         image = Image.open(image_data)
-        decoded_objects = decode(image)
-        if decoded_objects:
-            # Return the data from the first barcode found
-            return decoded_objects[0].data.decode('utf-8')
+        # Convert the image to grayscale for better processing
+        image = image.convert("L")
+        # Extract barcode data using python-barcode (EAN13 format assumed)
+        barcode = EAN13(image, writer=ImageWriter())
+        return barcode.get_fullcode()
     except Exception as e:
         st.error(f"Error decoding barcode: {e}")
     return None
