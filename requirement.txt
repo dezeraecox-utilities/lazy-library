@@ -1,5 +1,5 @@
-streamlit==1.43.2
-requests==2.32.3
-pandas==2.2.3
-pillow==11.1.0
-python-barcode==0.15.1
+python-barcode
+streamlit
+requests
+pandas
+pillow
