@@ -1,7 +1,9 @@
 name: lazy-library
 dependencies:
   - python==3.11.0
-  - python-barcode
+  # - python-barcode
   - requests
   - pandas
   - pillow
+  - pip:
+    - git+https://github.com/WhyNotHugo/python-barcode.git
