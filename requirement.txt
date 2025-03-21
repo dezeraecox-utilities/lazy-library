@@ -1,5 +1,0 @@
-python-barcode
-streamlit
-requests
-pandas
-pillow
