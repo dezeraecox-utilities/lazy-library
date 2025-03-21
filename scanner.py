@@ -17,8 +17,16 @@ def fetch_from_google_books(isbn):
             title = volume_info.get('title')
             authors = ', '.join(volume_info.get('authors', []))
             cover_url = volume_info.get('imageLinks', {}).get('thumbnail')
-            return {'Title': title, 'Authors': authors, 'Cover URL': cover_url}
-    return {'Title': None, 'Authors': None, 'Cover URL': None}
+            categories = ', '.join(volume_info.get('categories', []))
+            page_count = volume_info.get('pageCount')
+            return {
+                'Title': title,
+                'Authors': authors,
+                'Cover URL': cover_url,
+                'Categories': categories,
+                'Page Count': page_count
+            }
+    return {'Title': None, 'Authors': None, 'Cover URL': None, 'Categories': None, 'Page Count': None}
 
 def fetch_from_open_library(isbn):
     url = f'https://openlibrary.org/api/books?bibkeys=ISBN:{isbn}&format=json&jscmd=data'
@@ -29,18 +37,40 @@ def fetch_from_open_library(isbn):
         if key in data:
             book_data = data[key]
             title = book_data.get('title')
-            authors = ', '.join([author['name'] for author in book_data.get('authors', [])])
+            # Authors: list of dicts with "name" keys or list of strings.
+            authors_list = book_data.get('authors', [])
+            if authors_list and isinstance(authors_list[0], dict):
+                authors = ', '.join(author.get('name', '') for author in authors_list)
+            else:
+                authors = ', '.join(authors_list)
             cover_url = book_data.get('cover', {}).get('medium')
-            return {'Title': title, 'Authors': authors, 'Cover URL': cover_url}
-    return {'Title': None, 'Authors': None, 'Cover URL': None}
+            
+            # Subjects might be a list of dicts or strings.
+            subjects = book_data.get('subjects', [])
+            if subjects and isinstance(subjects[0], dict):
+                subjects = ', '.join(item.get('name', '') for item in subjects)
+            else:
+                subjects = ', '.join(subjects)
+            
+            page_count = book_data.get('number_of_pages')
+            return {
+                'Title': title,
+                'Authors': authors,
+                'Cover URL': cover_url,
+                'Categories': subjects,  # Using 'subjects' as categories.
+                'Page Count': page_count
+            }
+    return {'Title': None, 'Authors': None, 'Cover URL': None, 'Categories': None, 'Page Count': None}
 
 def merge_book_data(isbn, google_data, open_library_data):
-    # Prioritize non-empty data from Google; otherwise fallback to Open Library.
+    # For each field, use Google Books data if available; otherwise fallback to Open Library.
     return {
         'ISBN': isbn,
         'Title': google_data['Title'] or open_library_data['Title'] or 'N/A',
         'Authors': google_data['Authors'] or open_library_data['Authors'] or 'N/A',
-        'Cover URL': google_data['Cover URL'] or open_library_data['Cover URL'] or 'N/A'
+        'Cover URL': google_data['Cover URL'] or open_library_data['Cover URL'] or 'N/A',
+        'Categories/Subjects': google_data['Categories'] or open_library_data['Categories'] or 'N/A',
+        'Page Count': google_data['Page Count'] or open_library_data['Page Count'] or 'N/A'
     }
 
 # ---------- Function to decode barcode from an image ----------
